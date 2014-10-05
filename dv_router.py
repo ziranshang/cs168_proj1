@@ -65,7 +65,9 @@ class DVRouter (Entity):
                 is_updated = True
                 self.routingTable[destination] = {port: distance}
             else:
-                if not self.routingTable[destination][port] == distance - 1:
+                if not port in self.routingTable[destination].keys():
+                    self.routingTable[destination][port] = distance + 1
+                elif not self.routingTable[destination][port] == distance - 1:
                     self.routingTable[destination][port] = distance + 1
                     is_updated = True
         if is_updated:
@@ -73,5 +75,5 @@ class DVRouter (Entity):
                         
     def get_next_hop_to_destination(self, destination):
         # returns the smallest (port, distance) by distance
-        return min(self.routingTable, key = lambda x: x[1])
+        return min(self.routingTable.items(), key = lambda x: x[1])
     
