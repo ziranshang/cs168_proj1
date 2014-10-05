@@ -13,14 +13,13 @@ class DVRouter (Entity):
         # next hop => distance can be checked when receiving routing update
         # map destination => next hop to find which hop to send to when sending a packet
         
-        self.next_hop_to_destination = {} # maps destination => next hop, update if shorter distance found with routing update
-        self.distance_to_destination = {} # maps next hops => distance to destination through hop, compare for shorter distance with routing update
+        # {destination => {port => distance to dest through port}}
         
-        #pass
+        self.next_hop_to_destination = {} # maps destination => next hop ports, update if shorter distance found with routing update
+        self.distance_to_destination = {} # maps next hop ports => distance to destination through hop, compare for shorter distance with routing update
 
     def handle_rx (self, packet, port):
         # Add your code here!
-        #raise NotImplementedError
             
         if isinstance(packet, DiscoveryPacket):
             self.handle_discovery_packet(packet, port)
@@ -28,7 +27,10 @@ class DVRouter (Entity):
             self.handle_routing_update(packet, port)
         else:
             destination = packet.dst
-            self.send(packet, self.next_hop_to_destination[destination], False) #send to next hop on way to destination
+            if len(routingTable[destination]) == 0 or self.get_next_hop_to_destination(destination)[1] > 50:
+                return # drop packet if no next hops to destination or distance is too big
+            
+            self.send(packet, self.get_next_hop_to_destination(destination)[0], False) #send to next hop on way to destination
 
     def handle_discovery_packet(self, packet, port):
         # send routing updates to share forwarding table
@@ -40,16 +42,15 @@ class DVRouter (Entity):
         
         for destination in updated_paths:
             distance = updated_paths[destination]
-            if not destination in self.next_hop_to_destination.keys():
-                self.next_hop_to_destination[destination] = port
-                self.distance_to_destination[port] = distance
+            
+            if not destination in self.routingTable.keys():
+                self.routingTable[destination] = {port: distance}
             else:
-                current_next_hop = self.next_hop_to_destination[destination]
-                current_distance = self.distance_to_destination[current_next_hop]
-                if distance < current_distance:
-                    self.next_hop_to_destination[destination] = port
-                    self.distance_to_destination[port] = distance
-                elif distance == current_distance:
-                    if port < self.next_hop_to_destination[destination]:
-                        self.next_hop_to_destination[destination] = port
+                self.routingTable[destination][port] = distance
+                        
+        self.send_routing_update()
+                        
+    def get_next_hop_to_destination(self, destination):
+        # returns the smallest (port, distance) by distance
+        return min(self.routingTable, key = lambda x: x[1])
     
