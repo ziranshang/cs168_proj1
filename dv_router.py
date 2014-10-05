@@ -31,7 +31,7 @@ class DVRouter (Entity):
             self.send(packet, self.next_hop_to_destination[destination], False) #send to next hop on way to destination
 
     def handle_discovery_packet(self, packet, port):
-        
+        # send routing updates to share forwarding table
         
         pass
     
@@ -49,5 +49,7 @@ class DVRouter (Entity):
                 if distance < current_distance:
                     self.next_hop_to_destination[destination] = port
                     self.distance_to_destination[port] = distance
-                
+                elif distance == current_distance:
+                    if port < self.next_hop_to_destination[destination]:
+                        self.next_hop_to_destination[destination] = port
     
