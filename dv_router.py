@@ -25,7 +25,7 @@ class DVRouter (Entity):
             self.handle_routing_update(packet, port)
         else:
             destination = packet.dst
-            if len(routingTable[destination]) == 0 or self.get_next_hop_to_destination(destination)[1] > 50:
+            if len(self.routingTable[destination]) == 0 or self.get_next_hop_to_destination(destination)[1] > 50:
                 return # drop packet if no next hops to destination or distance is too big
             
             self.send(packet, self.get_next_hop_to_destination(destination)[0], False) #send to next hop on way to destination
@@ -39,17 +39,17 @@ class DVRouter (Entity):
         #link up:
         if up:
             self.routingTable[newHop] = dict([(port, 1)])
-            self.nextHop[port] = newHop
+            self.nextHops[port] = newHop
         #link down:
         else:
             self.routingTable[newHop][port] = float("inf")
-            del self.nextHop[port]
+            del self.nextHops[port]
         self.send_routing_update()
 
     def send_routing_update(self):
         #send routing update to every neighbors:
         for port, dst in self.nextHops.items():
-            update_packet = RoutingUpdate(self, dst)
+            update_packet = RoutingUpdate()
             for destination, portDict in self.routingTable.items():
                 bestDistance = min(portDict.itervalues())
                 update_packet.add_destination(destination, bestDistance)
@@ -65,7 +65,7 @@ class DVRouter (Entity):
                 is_updated = True
                 self.routingTable[destination] = {port: distance}
             else:
-                if not notself.routingTable[destination][port] == distance - 1:
+                if not self.routingTable[destination][port] == distance - 1:
                     self.routingTable[destination][port] = distance + 1
                     is_updated = True
         if is_updated:
