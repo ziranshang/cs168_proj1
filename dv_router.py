@@ -42,6 +42,12 @@ class DVRouter (Entity):
             distance = updated_paths[destination]
             if not destination in self.next_hop_to_destination.keys():
                 self.next_hop_to_destination[destination] = port
-                
+                self.distance_to_destination[port] = distance
+            else:
+                current_next_hop = self.next_hop_to_destination[destination]
+                current_distance = self.distance_to_destination[current_next_hop]
+                if distance < current_distance:
+                    self.next_hop_to_destination[destination] = port
+                    self.distance_to_destination[port] = distance
                 
     
