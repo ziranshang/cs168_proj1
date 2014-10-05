@@ -13,9 +13,9 @@ class DVRouter (Entity):
         # next hop => distance can be checked when receiving routing update
         # map destination => next hop to find which hop to send to when sending a packet
         
-        self.next_hop_to_destination = {} # maps destination => next hop, update if shorter distance found with routing update
-        self.distance_to_destination = {} # maps next hops => distance to destination through hop, compare for shorter distance with routing update
         
+        self.routingTable = {}  #key: destionation , value: key: port, value: distance to router to destionation through port.      
+        self.nextHops = {} #key: port, value: dst
         #pass
 
     def handle_rx (self, packet, port):
@@ -32,7 +32,29 @@ class DVRouter (Entity):
 
     def handle_discovery_packet(self, packet, port):
         # send routing updates to share forwarding table
-        
+        latency =  packet.latency
+        up = packet.is_link_up
+        newHop = packet.src.name
+        #record the new nextHop:
+        #link up:
+        if(up):
+            self.routingTable[newHop] = dict([(port, 1)])
+            self.nextHop[port] = newHop
+        #link down:
+        else:
+            self.routingTable[newHop][port] = float("inf")
+            del self.nextHop[port]
+        self.send_routing_update()
+
+    def send_routing_update(self):
+        #send routing update to every neighbors:
+        for port, dst in self.nextHops.items():
+            update_packet = RoutingUpdate(self, dst)
+            for destination, portDict in self.routingTable.items():
+                bestDistance = min(portDict.itervalues())
+                update_packet.add_destination(destination, bestDistance)
+            self.send(update_packet, port, False)
+
         pass
     
     def handle_routing_update(self, packet, port):
@@ -52,4 +74,3 @@ class DVRouter (Entity):
                 elif distance == current_distance:
                     if port < self.next_hop_to_destination[destination]:
                         self.next_hop_to_destination[destination] = port
-    
