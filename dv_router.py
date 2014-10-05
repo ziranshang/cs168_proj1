@@ -16,6 +16,8 @@ class DVRouter (Entity):
         self.routingTable = {} # {destination => {port => distance to dest through port}}
         self.nextHops = {} #key: port, value: dst
 
+        self.maxHopCount = 50
+
     def handle_rx (self, packet, port):
         # Add your code here!
             
@@ -25,7 +27,7 @@ class DVRouter (Entity):
             self.handle_routing_update(packet, port)
         else:
             destination = packet.dst
-            if len(self.routingTable[destination]) == 0 or self.get_next_hop_to_destination(destination)[1] > 50:
+            if len(self.routingTable[destination]) == 0 or self.get_next_hop_to_destination(destination)[1] > self.maxHopCount:
                 return # drop packet if no next hops to destination or distance is too big
             
             self.send(packet, self.get_next_hop_to_destination(destination)[0], False) #send to next hop on way to destination
@@ -50,17 +52,15 @@ class DVRouter (Entity):
         #send routing update to every neighbors:
         for port, dst in self.nextHops.items():
             update_packet = RoutingUpdate()
-            for destination, portDict in self.routingTable.items():
-                bestDistance = min(portDict.itervalues())
+            for destination in self.routingTable.keys():
+                bestDistance = self.get_next_hop_to_destination(destination)[1]
                 update_packet.add_destination(destination, bestDistance)
             self.send(update_packet, port, False)
     
     def handle_routing_update(self, packet, port):
-        updated_paths = packet.paths
         is_updated = False
-        for destination in updated_paths:
-            distance = updated_paths[destination]
-            
+        for destination in packet.all_dests():
+            distance = packet.get_distance(destination)
             if not destination in self.routingTable.keys():
                 is_updated = True
                 self.routingTable[destination] = {port: distance}
@@ -74,6 +74,6 @@ class DVRouter (Entity):
             self.send_routing_update()
                         
     def get_next_hop_to_destination(self, destination):
-        # returns the smallest (port, distance) by distance
-        return min(self.routingTable.items(), key = lambda x: x[1])
+        # returns the smallest (port, distance) for destination by distance
+        return min(self.routingTable[destination].items(), key = lambda x: x[1])
     
