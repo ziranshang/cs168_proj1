@@ -15,7 +15,6 @@ class DVRouter (Entity):
         
         self.routingTable = {} # {destination => {port => distance to dest through port}}
         self.nextHops = {} #key: port, value: dst
-        self.forwardTable = {} #{destination => port}
         self.maxHopCount = 50
 
     def handle_rx (self, packet, port):
@@ -58,6 +57,7 @@ class DVRouter (Entity):
         #del self.routingTable[newHop][port]
         del self.nextHops[port]
 
+
     def send_routing_update(self):
         #send routing update to every neighbors:
         for port, dst in self.nextHops.items():
@@ -99,9 +99,9 @@ class DVRouter (Entity):
         if self.get_next_hop_to_destination(destination)[1] > self.maxHopCount:
             self.log("Best Path is too long, destination: " + destination)
             return
-       
-        self.log(" bestDistance: " + str(self.get_next_hop_to_destination(destination)[1]))
-        self.log("bestHop: " + self.nextHops[self.get_next_hop_to_destination(destination)[0]])
+
+        #self.log(" bestDistance: " + str(self.get_next_hop_to_destination(destination)[1]))
+        #self.log("bestHop: " + self.nextHops[self.get_next_hop_to_destination(destination)[0]])
         
         self.send(packet, self.get_next_hop_to_destination(destination)[0], False) #send to next hop on way to destination
 
@@ -111,7 +111,7 @@ class DVRouter (Entity):
     
 
     def log_routingTable(self):
-        for portDict in self.routingTable.values():
-            for port, distances in self.routingTable.items():
-                if port in self.nextHops.keys():
-                    self.log("bestHop, bestDistance: " + self.nextHops[bestPort] + ", " + str(bestDistance))
+        for destination, portDict in self.routingTable.items():
+            for port, distance in portDict.items():
+                if not isinstance(destination, BasicHost):
+                    self.log("destination, bestHop, bestDistance: " + destination + ", " + self.nextHops[port] + ", " + str(distance))
