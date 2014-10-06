@@ -29,13 +29,10 @@ class DVRouter (Entity):
             
     def handle_discovery_packet(self, packet, port):
         # send routing updates to share forwarding table
-        latency =  packet.latency
         up = packet.is_link_up
         newHop = packet.src.name
-        #record the new nextHop:
         #link up:
         if up:
-            #self.log("link up")
             self.routingTable[newHop] = dict([(port, 1)])
             self.nextHops[port] = newHop
         #link down:
@@ -47,14 +44,7 @@ class DVRouter (Entity):
     def handle_down(self, newHop, port):
         for destination, portDict in self.routingTable.items():
             if port in portDict.keys():
-                bestPort, bestDistance = self.get_next_hop_to_destination(destination)
-                #self.log("for destination: " + destination)
-                #self.log("before || bestHop, bestDistance: " + self.nextHops[bestPort] + ", " + str(bestDistance))
                 portDict[port] = self.maxHopCount + 1
-                bestPort, bestDistance = self.get_next_hop_to_destination(destination)
-                #self.log("after || bestHop, bestDistance: " + self.nextHops[bestPort] + ", " + str(bestDistance))
-        #self.routingTable[newHop][port] = float("inf")
-        #del self.routingTable[newHop][port]
         del self.nextHops[port]
 
 
@@ -65,16 +55,14 @@ class DVRouter (Entity):
             for destination in self.routingTable.keys():
                 bestPort, bestDistance = self.get_next_hop_to_destination(destination)
                 #self.log("bestHop, bestDistance: " + self.nextHops[bestPort] + ", " + str(bestDistance))
-                if not (bestPort == port and (not destination == self.nextHops[port])):    #split horzion:
-                    update_packet.add_destination(destination, bestDistance)
+                #if not (bestPort == port and (not destination == self.nextHops[port])):    #split horzion:
+                update_packet.add_destination(destination, bestDistance)
             self.send(update_packet, port, False)
 
     def handle_routing_update(self, packet, port):
         is_updated = False
         for destination in packet.all_dests():
-            distance = packet.get_distance(destination)
-            #if distance > self.maxHopCount:
-             #   self.log("src dropped: " packet.src)  
+            distance = packet.get_distance(destination)  
             if not destination in self.routingTable.keys():
                 is_updated = True
                 self.routingTable[destination] = {port: distance}
@@ -89,9 +77,8 @@ class DVRouter (Entity):
                         
     def handle_forward_packet(self, packet):
         destination = packet.dst
-        self.log_routingTable()
         if destination not in self.routingTable.keys():
-            self.log("not such destination in routingTable, destination: " + destination)
+            self.log("no such destination in routingTable, destination: " + destination)
             return
         if len(self.routingTable[destination].items()) == 0:
             self.log("No ports for destination in routingTable, destination: " + destination)
@@ -102,7 +89,9 @@ class DVRouter (Entity):
 
         #self.log(" bestDistance: " + str(self.get_next_hop_to_destination(destination)[1]))
         #self.log("bestHop: " + self.nextHops[self.get_next_hop_to_destination(destination)[0]])
-        
+        #self.log_nextHops()    
+        #self.log_routingTable()
+
         self.send(packet, self.get_next_hop_to_destination(destination)[0], False) #send to next hop on way to destination
 
     def get_next_hop_to_destination(self, destination):
@@ -113,5 +102,9 @@ class DVRouter (Entity):
     def log_routingTable(self):
         for destination, portDict in self.routingTable.items():
             for port, distance in portDict.items():
-                if not isinstance(destination, BasicHost):
+                if not isinstance(destination, BasicHost) and port in self.nextHops.keys():
                     self.log("destination, bestHop, bestDistance: " + destination + ", " + self.nextHops[port] + ", " + str(distance))
+
+    def log_nextHops(self):
+        for port, nextHop in self.nextHops.items():
+            self.log("nextHop: " + nextHop)
