@@ -53,8 +53,9 @@ class DVRouter (Entity):
         for port, dst in self.nextHops.items():
             update_packet = RoutingUpdate()
             for destination in self.routingTable.keys():
-                bestDistance = self.get_next_hop_to_destination(destination)[1]
-                update_packet.add_destination(destination, bestDistance)
+                bestPort, bestDistance = self.get_next_hop_to_destination(destination)
+                if (not bestPort == port) or (destination == self.nextHops[port]):    #split horzion:
+                    update_packet.add_destination(destination, bestDistance)
             self.send(update_packet, port, False)
     
     def handle_routing_update(self, packet, port):
@@ -65,7 +66,7 @@ class DVRouter (Entity):
                 is_updated = True
                 self.routingTable[destination] = {port: distance}
             else:
-                if not port in self.routingTable[destination].keys():
+                if not port in self.routingTable[destination].keys():   #when we had no way of going to destination through any port before
                     self.routingTable[destination][port] = distance + 1
                 elif not self.routingTable[destination][port] == distance + 1:
                     self.routingTable[destination][port] = distance + 1
