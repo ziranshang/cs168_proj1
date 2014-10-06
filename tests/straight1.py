@@ -74,20 +74,27 @@ class ReceiveEntity (Entity):
 def create (switch_type = DVRouter, host_type = BasicHost):
     """
     Creates a topology with loops that looks like:
-    h1a     h2a
-       \   /
-        s1        
+    h1a                   h2a
+       \                 /
+        s1 - s2 - s3 - s4       
     """
     switch_type.create('s1')
+    switch_type.create('s2')
+    switch_type.create('s3')
+    switch_type.create('s4')
 
     host_type.create('h1a')
     host_type.create('h2a')
 
-    ReceiveEntity.create('sneakylistener', [s1] , [h1a, 1], 5)
+    ReceiveEntity.create('sneakylistener', [s4, s3, s2, s1] , [h1a, 1], 5)
 
     topo.link(sneakylistener, h1a)
     topo.link(sneakylistener, s1)
-    topo.link(s1, h2a)
+    topo.link(s1, s2)
+    topo.link(s2, s3)
+    topo.link(s3, s4)
+    topo.link(s4, h2a)
+
 
 import sim.core
 from dv_router import DVRouter as switch
