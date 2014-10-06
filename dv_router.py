@@ -77,7 +77,7 @@ class DVRouter (Entity):
              #   self.log("src dropped: " packet.src)  
             if not destination in self.routingTable.keys():
                 is_updated = True
-                self.routingTable[destination] = {port: distance}
+                self.routingTable[destination] = {port: distance + 1}
             else:
                 if not port in self.routingTable[destination].keys():   #when we had no way of going to destination through any port before
                     self.routingTable[destination][port] = distance + 1
@@ -102,7 +102,12 @@ class DVRouter (Entity):
 
         #self.log(" bestDistance: " + str(self.get_next_hop_to_destination(destination)[1]))
         #self.log("bestHop: " + self.nextHops[self.get_next_hop_to_destination(destination)[0]])
-        
+        self.log('destination: ' + str(destination))
+        self.log('table for destination: ' + str(self.routingTable[destination]))
+        for entry in self.routingTable[destination]:
+            if entry in self.nextHops.keys():
+                self.log('port: ' + str(entry) + ' dest: ' + str(self.nextHops[entry]))
+        #self.log("sending to destination: " + str(self.get_next_hop_to_destination(destination)[0]) + str(self.get_next_hop_to_destination(destination)[1]))
         self.send(packet, self.get_next_hop_to_destination(destination)[0], False) #send to next hop on way to destination
 
     def get_next_hop_to_destination(self, destination):
@@ -113,5 +118,6 @@ class DVRouter (Entity):
     def log_routingTable(self):
         for destination, portDict in self.routingTable.items():
             for port, distance in portDict.items():
-                if not isinstance(destination, BasicHost):
+                if port in self.nextHops.keys() and not isinstance(destination, BasicHost):
                     self.log("destination, bestHop, bestDistance: " + destination + ", " + self.nextHops[port] + ", " + str(distance))
+                    
